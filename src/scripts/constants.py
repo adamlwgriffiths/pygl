@@ -157,40 +157,4 @@ def main():
 
 
 if __name__ == '__main__':
-    if True:
-        main()
-        exit()
-
-
-if __name__ == '__main__':
-    from optparse import OptionParser
-    parser = OptionParser(usage="%prog [options]")
-    parser.add_option('--clear-cull', dest='cull', action='store_const', const=list(),
-                      help="There is a predefined list of suffixes to cull, this clears them.")
-    parser.add_option('-c', '--cull', dest='cull', action='append',
-                      default=['APPLE', 'SGIX', 'ATI', 'NV', 'EXT', 'ARB'],
-                      help="Define a preference for constant suffixes, from least preferred to most.")
-    parser.add_option('-s', '--select', dest='select', action='append',
-                      default=[],
-                      help="Select which constants you want to retrieve")
-
-    options, args = parser.parse_args()
-
-    print options
-    print args
-
-    constants = read_header(stdin)
-    if options.select:
-        constants = select(constants, options.select)
-    constants = remove_prefix(constants) # remove GL_ from constant names
-    constants = parse_values(constants)  # transform strings into integers for constant values
-
-    constants = remove_duplicates(constants, options.cull)
-
-    print "from gltypes import GLenum"
-    print
-    keys = constants.keys()
-    keys.sort()
-    for constant in keys:
-        value = constants[constant]
-        print_constant(constant, value)
+    main()
