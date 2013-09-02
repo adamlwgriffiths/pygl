@@ -48,6 +48,13 @@ def remove_prefix(constants):
         if m:
             name = m.group(1)
 
+        # avoid GL_3D etc causing invalid variables starting with numbers
+        try:
+            int(name[0])
+            name = '_' + name
+        except:
+            pass
+
         transformed_constants[name] = value
 
     return transformed_constants
