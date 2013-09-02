@@ -10,13 +10,14 @@ from pygl.gltypes import GLenum
 
 lib = None
 
-if 'linux' in platform:
+if platform == 'win32':
+    raise RuntimeError('Windows not supported')
+else:
     if 'USE_BUGLE' in environ:
         lib = CDLL(find_library('libbugle.so')) #FIXME: debug
     else:
         lib = CDLL(find_library('GL'))
-elif platform == 'win32':
-    raise RuntimeError('No')
+
 
 Enable = lib.glEnable
 Enable.argtypes = [GLenum]
