@@ -1,14 +1,11 @@
 from sys import stdin
-
-from re import compile
-
-from optparse import OptionParser
+import re
 
 def print_constant(constant, value):
     print "%s = GLenum(0x%.4X)" % (constant, value)
 
 def read_header(file):
-    constant = compile('#define\s+(GL_[A-Z0-9_x]+)\s+(0x[0-9A-Fa-f]+|[0-9]+L?)')
+    constant = re.compile('#define\s+(GL_[A-Z0-9_x]+)\s+(0x[0-9A-Fa-f]+|[0-9]+L?)')
 
     constants = {}
     for line in file:
@@ -29,7 +26,7 @@ def parse_values(constants):
 def select(constants, selection):
     transformed_constants = {}
 
-    selected = compile('^(GL_)?(%s)(_[A-Z]+)?$' % '|'.join(selection)) # results in some false positives
+    selected = re.compile('^(GL_)?(%s)(_[A-Z]+)?$' % '|'.join(selection)) # results in some false positives
                                                                        # can remedy with list of vendor names
     for name, value in constants.iteritems():
         if selected.match(name):
@@ -40,7 +37,7 @@ def select(constants, selection):
 def remove_prefix(constants):
     transformed_constants = {}
 
-    prefix = compile('^GL_(.*)$')
+    prefix = re.compile('^GL_(.*)$')
 
     for name, value in constants.iteritems():
         m = prefix.match(name)
@@ -60,7 +57,7 @@ def remove_prefix(constants):
     return transformed_constants
 
 def remove_duplicates(constants, cull_list):
-    suffix_regex = compile("^([A-Za-z0-9_]+)_(%s)$" % '|'.join(cull_list))
+    suffix_regex = re.compile("^([A-Za-z0-9_]+)_(%s)$" % '|'.join(cull_list))
 
     def compare_suffixes(a, b):
         try:
@@ -104,8 +101,69 @@ def remove_duplicates(constants, cull_list):
             transformed_constants[suffixes[0][0]] = value
 
     return transformed_constants
-    
+
+
+
+def main():
+    import argparse
+    parser = argparse.ArgumentParser(description='Manages the constants.py file.')
+    parser.add_argument('--header',
+        help='the gl header to parse'
+    )
+    parser.add_argument('-c', '--cull', dest='cull', action='append',
+        default=['APPLE', 'SGIX', 'ATI', 'NV', 'EXT', 'ARB'],
+        help="Define a preference for constant suffixes, from least preferred to most."
+    )
+    parser.add_argument('--clear-cull', dest='cull', action='store_const', const=list(),
+        help="There is a predefined list of suffixes to cull, this clears them."
+    )
+    parser.add_argument('-s', '--select', dest='select', action='append',
+        default=[],
+        help="Select which constants you want to retrieve"
+    )
+
+    args = vars(parser.parse_args())
+
+    if args['header']:
+        header = args['header']
+    else:
+        from sys import platform
+        if 'darwin' in platform:
+            header = '/System/Library/Frameworks/OpenGL.framework/Versions/A/Headers/gl.h'
+        elif 'linux' in platform:
+            header = '/usr/include/GL/glext.h'
+        elif 'win32' in platform:
+            raise ValueError('Win32 not supported')
+        else:
+            raise ValueError('Unknown platform')
+
+    with open(header) as f:
+        constants = read_header(f)
+
+    if len(args['select']):
+        constants = select(constants, args['select'])
+    constants = remove_prefix(constants) # remove GL_ from constant names
+    constants = parse_values(constants)  # transform strings into integers for constant values
+    constants = remove_duplicates(constants, args['cull'])
+
+    print "from gltypes import GLenum"
+    print
+    keys = constants.keys()
+    keys.sort()
+    for constant in keys:
+        value = constants[constant]
+        print_constant(constant, value)
+
+
+
 if __name__ == '__main__':
+    if True:
+        main()
+        exit()
+
+
+if __name__ == '__main__':
+    from optparse import OptionParser
     parser = OptionParser(usage="%prog [options]")
     parser.add_option('--clear-cull', dest='cull', action='store_const', const=list(),
                       help="There is a predefined list of suffixes to cull, this clears them.")
@@ -117,6 +175,9 @@ if __name__ == '__main__':
                       help="Select which constants you want to retrieve")
 
     options, args = parser.parse_args()
+
+    print options
+    print args
 
     constants = read_header(stdin)
     if options.select:
