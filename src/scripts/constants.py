@@ -128,5 +128,8 @@ if __name__ == '__main__':
 
     print "from gltypes import GLenum"
     print
-    for constant, value in constants.iteritems():
+    keys = constants.keys()
+    keys.sort()
+    for constant in keys:
+        value = constants[constant]
         print_constant(constant, value)
