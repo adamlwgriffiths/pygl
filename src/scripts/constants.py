@@ -107,8 +107,9 @@ def remove_duplicates(constants, cull_list):
 def main():
     import argparse
     parser = argparse.ArgumentParser(description='Manages the constants.py file.')
-    parser.add_argument('--header',
-        help='the gl header to parse'
+    parser.add_argument('-f', '--file', dest='header', action='append',
+        default=[],
+        help='the gl header to parse',
     )
     parser.add_argument('-c', '--cull', dest='cull', action='append',
         default=['APPLE', 'SGIX', 'ATI', 'NV', 'EXT', 'ARB'],
@@ -124,21 +125,28 @@ def main():
 
     args = vars(parser.parse_args())
 
-    if args['header']:
-        header = args['header']
+    if len(args['header']):
+        headers = args['header']
     else:
         from sys import platform
         if 'darwin' in platform:
-            header = '/System/Library/Frameworks/OpenGL.framework/Versions/A/Headers/gl.h'
+            headers = [
+                '/System/Library/Frameworks/OpenGL.framework/Versions/A/Headers/gl.h',
+                '/System/Library/Frameworks/OpenGL.framework/Versions/A/Headers/gl3.h'
+            ]
         elif 'linux' in platform:
-            header = '/usr/include/GL/glext.h'
+            headers = [
+                '/usr/include/GL/glext.h',
+            ]
         elif 'win32' in platform:
             raise ValueError('Win32 not supported')
         else:
             raise ValueError('Unknown platform')
 
-    with open(header) as f:
-        constants = read_header(f)
+    constants = {}
+    for header in headers:
+        with open(header) as f:
+            constants.update(read_header(f))
 
     if len(args['select']):
         constants = select(constants, args['select'])
